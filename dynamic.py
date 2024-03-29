@@ -103,22 +103,25 @@ def export_next_round_to_excel(filename, standings, round_number):
     # Sort rankings data based on wins, then losses
     rankings_data.sort(key=lambda x: (-x[1], x[2]))  # Sort by wins, then losses
     df_rankings = pd.DataFrame(rankings_data, columns=['Standings', 'Wins', 'Losses']) #this should go to the first sheet only
-
+    
+    # Define the threshold for the start of the DE stage
+    DE_THRESHOLD = 4
+    
     # From here we need to check if the round_number is bigger than 4 and if so we need to start the DE stage
-    if round_number > 4: #this tells us that we are into the DE stage
+    if round_number > DE_THRESHOLD: #this tells us that we are into the DE stage
         sorted_standings = sorted(standings.items(), key=lambda x: (-x[1]['wins'], x[1]['losses']))
 
 
         #TODO this part for DE is far from ready
         # Get the participants from the previous DE stage and if this is the first DE stage than take the top 8 participants
-        if round_number == 5:
+        if round_number == DE_THRESHOLD+1:
             top_n_participants = qualify_for_de(sorted_standings, top_n=8)
         else:
             top_n_participants = de_read_last_round_and_update_standings(filename)
             
         # Export DE results to Excel
         with pd.ExcelWriter(filename, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-            if(round_number <= 5):
+            if(round_number <= DE_THRESHOLD+1):
                 existing_data = pd.read_excel(filename, sheet_name=f'Swiss Round {round_number-1}', usecols=[0, 1, 2])
                 combined_data = pd.concat([existing_data, df_rankings], axis=1)
                 combined_data.to_excel(writer, sheet_name=f'Swiss Round {round_number-1}', index=False, startcol=0)
@@ -137,7 +140,7 @@ def export_next_round_to_excel(filename, standings, round_number):
             for col in worksheet.columns:
                 worksheet.column_dimensions[col[0].column_letter].width = 25
                 
-            if(round_number <= 5):
+            if(round_number <= DE_THRESHOLD+1):
                 worksheet = writer.sheets[f'Swiss Round {round_number-1}']
                 for col in worksheet.columns:
                     worksheet.column_dimensions[col[0].column_letter].width = 25
@@ -304,9 +307,9 @@ def export_to_excel(pairings):
 
 def main():
     excel_filename = "tournament_results.xlsx"
-    participants = ["Toni", "Stoyan", "Plamen", "Bobi", "Petyo", "Rosko", "Sasho", "Marto", "Nelly", "Nati", "Alexi",
-                    "Tsveti", "Misho", "Pesho", "Alex", "Sasho M", "Reni", "Miro", "Gabi", "Geri", "Didi", "Kalata",
-                    "Yavkata", "Ivo", "Marto S"]
+    participants = ["Чом", "Жеко", "Рени", "Алекс", "Марто С.", "Миро", "Цвети", "Диди", "Нати З.",
+                    "Роско", "Сандо", "Явката", "Стоян", "Нели", "Пламен", "Петьо", "Алекси", "Стан", 
+                    "Калата К.", "Нати Т.", "Александър К.", "Теодор Й.", "Габи"]
 
     # Initialize standings
     standings = {participant: {'wins': 0, 'losses': 0, 'matches': []} for participant in participants}
