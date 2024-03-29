@@ -1,5 +1,3 @@
-# setup-tournament-schema
-
 # Swiss and DE Tournament Simulation Scripts
 
 ## Overview
@@ -48,18 +46,9 @@ Before running `simulate.py` and `dynamic.py`, ensure your environment is set up
    ## Running the Scripts
    1. Navigate to the directory containing `simulate.py` and `dynamic.py`.
    2. To run `simulate.py`, execute the following command in your terminal:
+   python simulate.py
+   3. To run `dynamic.py`, execute the following command in your terminal:
+   python dynamic.py
    ```
-
-Run the simulation with:
-
-```bash
-python simulate.py
-```
-
-3. To run `dynamic.py`, execute the following command in your terminal:
-
-```bash
-python dynamic.py
-```
 
 This setup ensures you have all necessary components to successfully simulate and manage tournament stages.
