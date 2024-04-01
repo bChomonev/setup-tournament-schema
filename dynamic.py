@@ -30,7 +30,7 @@ def simulate_swiss_round(participants, round_number, previous_rounds_results):
 
 def simulate_swiss_rounds(participants, num_rounds=1, start_round=1, initial_standings=None):
     if initial_standings is None:
-        standings = {participant: {'wins': 0, 'losses': 0, 'matches': []} for participant in participants}
+        standings = {participant: {'wins': 0, 'losses': 0, 'matches': [], 'Points Left': 0} for participant in participants}
     else:
         standings = initial_standings
 
@@ -38,7 +38,7 @@ def simulate_swiss_rounds(participants, num_rounds=1, start_round=1, initial_sta
 
     for participant in participants:
         if participant not in standings:
-            standings[participant] = {'wins': 0, 'losses': 0, 'matches': []}
+            standings[participant] = {'wins': 0, 'losses': 0, 'matches': [], 'Points Left': 0}
 
     for round_number in range(start_round, start_round + num_rounds):
         sorted_participants = sorted(standings.keys(), key=lambda x: (-standings[x]['wins'], standings[x]['losses'], x))
@@ -70,7 +70,7 @@ def generate_pairings_based_on_rankings(participants):
     for i in range(0, len(participants), 2):
         # Check if there's an odd participant out for a bye
         if i + 1 < len(participants):
-            pair = (participants[i], participants[i+1], "")
+            pair = (participants[i], participants[i+1], "", "")
             pairings.append(pair)
         else:
             # Assign a bye (win) if odd number of participants
@@ -83,7 +83,7 @@ def de_generate_pairings_based_on_rankings(participants):
     pairings = []
     num_participants = len(participants)
     for i in range(num_participants // 2):
-        pairings.append((participants[i], participants[num_participants - i - 1], ""))
+        pairings.append((participants[i], participants[num_participants - i - 1], "", ""))
     return pairings
     
 
@@ -98,19 +98,19 @@ def export_next_round_to_excel(filename, standings, round_number):
     # Calculate rankings based on standings
     rankings_data = []
     for participant, info in standings.items():
-        rankings_data.append([participant, info['wins'], info['losses']])
+        rankings_data.append([participant, info['wins'], info['losses'], info['Points Left Standings']])
 
     # Sort rankings data based on wins, then losses
-    rankings_data.sort(key=lambda x: (-x[1], x[2]))  # Sort by wins, then losses
-    df_rankings = pd.DataFrame(rankings_data, columns=['Standings', 'Wins', 'Losses']) #this should go to the first sheet only
+    rankings_data.sort(key=lambda x: (-x[1], x[2], x[3]))  # Sort by wins, then losses
+    df_rankings = pd.DataFrame(rankings_data, columns=['Standings', 'Wins', 'Losses', 'Points Left Standings']) #this should go to the first sheet only
     
     # Define the threshold for the start of the DE stage
     DE_THRESHOLD = 4
     
     # From here we need to check if the round_number is bigger than 4 and if so we need to start the DE stage
     if round_number > DE_THRESHOLD: #this tells us that we are into the DE stage
-        sorted_standings = sorted(standings.items(), key=lambda x: (-x[1]['wins'], x[1]['losses']))
-
+        sorted_standings = sorted(standings.items(), key=lambda x: (-x[1]['wins'], x[1]['losses'], x[1]['Points Left Standings']))
+    
 
         #TODO this part for DE is far from ready
         # Get the participants from the previous DE stage and if this is the first DE stage than take the top 8 participants
@@ -122,7 +122,7 @@ def export_next_round_to_excel(filename, standings, round_number):
         # Export DE results to Excel
         with pd.ExcelWriter(filename, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
             if(round_number <= DE_THRESHOLD+1):
-                existing_data = pd.read_excel(filename, sheet_name=f'Swiss Round {round_number-1}', usecols=[0, 1, 2])
+                existing_data = pd.read_excel(filename, sheet_name=f'Swiss Round {round_number-1}', usecols=[0, 1, 2, 3])
                 combined_data = pd.concat([existing_data, df_rankings], axis=1)
                 combined_data.to_excel(writer, sheet_name=f'Swiss Round {round_number-1}', index=False, startcol=0)
             
@@ -130,7 +130,7 @@ def export_next_round_to_excel(filename, standings, round_number):
             de_pairings = de_generate_pairings_based_on_rankings(top_n_participants)
 
             # Convert pairings to DataFrame for easier manipulation and export
-            df_de_round = pd.DataFrame(de_pairings, columns=['Participant', 'Opponent',"Result"])
+            df_de_round = pd.DataFrame(de_pairings, columns=['Participant', 'Opponent', "Result", 'Points Left'])
 
             # Export DE round results to Excel
             df_de_round.to_excel(writer, sheet_name=f'DE Round {round_number}', index=False)
@@ -149,10 +149,10 @@ def export_next_round_to_excel(filename, standings, round_number):
         # Since you want to prepare for the next round without results, we'll use the rankings to generate pairings
         # Assuming you have a function to generate pairings from rankings or standings
         participants_sorted_by_rankings = [participant for participant, _ in
-                                           sorted(standings.items(), key=lambda x: (-x[1]['wins'], x[1]['losses']))]
+                           sorted(standings.items(), key=lambda x: (-x[1]['wins'], x[1]['losses'], x[1]['Points Left Standings']))]
         round_data = generate_pairings_based_on_rankings(participants_sorted_by_rankings)
         # Convert round_data to DataFrame for easier manipulation and export
-        df_next_round = pd.DataFrame(round_data, columns=['Participant', 'Opponent', 'Result'])
+        df_next_round = pd.DataFrame(round_data, columns=['Participant', 'Opponent', 'Result', 'Points Left'])
         next_round_sheet_name = f'Swiss Round {round_number}'
             
         print(f"{next_round_sheet_name} has been added to 'tournament_results.xlsx'.")
@@ -161,7 +161,7 @@ def export_next_round_to_excel(filename, standings, round_number):
             df_next_round.to_excel(writer, sheet_name=next_round_sheet_name, index=False)
             
             # Get the existing data in columns 1 and 2
-            existing_data = pd.read_excel(filename, sheet_name=f'Swiss Round {round_number-1}', usecols=[0, 1, 2])
+            existing_data = pd.read_excel(filename, sheet_name=f'Swiss Round {round_number-1}', usecols=[0, 1, 2, 3])
             combined_data = pd.concat([existing_data, df_rankings], axis=1)
             combined_data.to_excel(writer, sheet_name=f'Swiss Round {round_number-1}', index=False, startcol=0)
             
@@ -177,6 +177,7 @@ def export_next_round_to_excel(filename, standings, round_number):
 
 def read_last_round_and_update_standings(filename, initial_standings):
     xls = pd.ExcelFile(filename)
+    
     if(xls.sheet_names.__len__ == 1):
         latest_round_sheet_name = xls.sheet_names[xls.sheet_names[0]]
         previous_round_sheet_name = xls.sheet_names[xls.sheet_names[0]]
@@ -191,10 +192,11 @@ def read_last_round_and_update_standings(filename, initial_standings):
     except ValueError:
         print(f"Error extracting round number from sheet name: {latest_round_sheet_name}")
         last_round_played = 0
-
+        
   # Check if standings exist in the previous file
     if 'Wins' in df_previous_round.columns:
-        standings = {row['Standings']: {'wins': row['Wins'], 'losses': row['Losses'], 'matches': []} for index, row in df_previous_round.iterrows()}
+        standings = {row['Standings']: {'wins': row['Wins'], 'losses': row['Losses'], 'matches': [], 
+                                        'Points Left Standings': row['Points Left Standings']} for index, row in df_previous_round.iterrows()}
     else:
         standings = initial_standings
 
@@ -202,20 +204,26 @@ def read_last_round_and_update_standings(filename, initial_standings):
         participant = row['Participant']
         opponent = row['Opponent']
         result = row['Result']  # Assumes 'Win', 'Loss', or 'Bye'
+        points_left = row['Points Left']
            
         if opponent.lower() == 'bye':
             standings[participant]['wins'] += 1
-            standings[participant]['matches'].append((last_round_played, opponent, result))
+            standings[participant]['Points Left Standings'] += 0
+            standings[participant]['matches'].append((last_round_played, opponent, result, 0))
         elif result.lower() == 'win':
             standings[participant]['wins'] += 1
+            standings[participant]['Points Left Standings'] += 0
             standings[opponent]['losses'] += 1
-            standings[participant]['matches'].append((last_round_played, opponent, result))
-            standings[opponent]['matches'].append((last_round_played, participant, 'Loss'))
+            standings[opponent]['Points Left Standings'] += points_left
+            standings[participant]['matches'].append((last_round_played, opponent, result, 0))
+            standings[opponent]['matches'].append((last_round_played, participant, 'Loss', points_left))
         elif result.lower() == 'loss':
             standings[participant]['losses'] += 1
+            standings[participant]['Points Left Standings'] += points_left
             standings[opponent]['wins'] += 1
-            standings[participant]['matches'].append((last_round_played, opponent, result))
-            standings[opponent]['matches'].append((last_round_played, participant, 'Win'))
+            standings[opponent]['Points Left Standings'] += 0
+            standings[participant]['matches'].append((last_round_played, opponent, result, points_left))
+            standings[opponent]['matches'].append((last_round_played, participant, 'Win', 0))
 
     return standings, last_round_played
 
@@ -293,8 +301,8 @@ def create_initial_pairings(participants):
 
 def export_to_excel(pairings):
     # Prepare data for export
-        round_data = [[pair[0], pair[1], ''] for pair in pairings]
-        df_round = pd.DataFrame(round_data, columns=['Participant', 'Opponent', 'Result'])
+        round_data = [[pair[0], pair[1], '', ''] for pair in pairings]
+        df_round = pd.DataFrame(round_data, columns=['Participant', 'Opponent', 'Result', 'Points Left'])
 
         # Export to Excel
         with pd.ExcelWriter("tournament_results.xlsx", engine='openpyxl') as writer:
@@ -312,7 +320,7 @@ def main():
                     "Калата К.", "Нати Т.", "Александър К.", "Теодор Й.", "Габи"]
 
     # Initialize standings
-    standings = {participant: {'wins': 0, 'losses': 0, 'matches': []} for participant in participants}
+    standings = {participant: {'wins': 0, 'losses': 0, 'matches': [], 'Points Left Standings': 0} for participant in participants}
 
     if os.path.exists(excel_filename):
         print("\nFile exists. Reading last round results and updating standings...")
